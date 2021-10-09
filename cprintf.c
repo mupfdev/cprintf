@@ -1,3 +1,5 @@
+#include "cprintf.h"
+
 #ifdef _WIN32
 #ifdef _MSC_VER
 #include <windows.h>
