@@ -93,14 +93,14 @@ static void cprintf_parse(const char * str, context_t * out) {
         {
 #ifdef _WIN32
             if (colors[i][0] == str[1]) {
-                out->attr |= colors[i][str[0] == 'f' ? 1 : 2];
+                out->attr |= colors[i][l == 'f' ? 1 : 2];
                 break;
             }
 #else
             if (ansi_order[i] == tolower(str[1])) {
                 strcpy(out->ansi + out->ansi_len, "\x1b[");
                 strcpy(out->ansi + out->ansi_len + 4, "m");
-                out->ansi[out->ansi_len + 2] = str[0] == 'f' ? '3' : '4';
+                out->ansi[out->ansi_len + 2] = l == 'f' ? '3' : '4';
                 out->ansi[out->ansi_len + 3] = '0' + i;
                 out->ansi_len += 5;
                 
