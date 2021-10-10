@@ -33,6 +33,7 @@ static unsigned char cprintf_init(void) {
         return 0;
 
     def_attr = info.wAttributes;
+    return 1;
 }
 
 static const WORD colors[7][3] = {
