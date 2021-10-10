@@ -48,5 +48,5 @@ You can make a text bold or background color brighter by capitalizing the format
 You can combine multiple formats too, with `%{...}`. Example:
 - `%{fr,u}` combines `%fr` (red text) and `%u` (underline/underscore).
 
-Invalid combinations will cause undefined behaviour.
-Repeated combinations, or more than 3 combinations will cause undefined behaviour on POSIX builds.
+Invalid format specifier(s) will cause undefined behaviour.
+Repeated combinations, or more than 3 combinations will cause undefined behaviour in POSIX builds.
