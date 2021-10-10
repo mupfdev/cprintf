@@ -125,7 +125,7 @@ static void cprintf_parse(const char * str, context_t * out) {
     }
 } 
 
-void cprintf(const size_t fmt_am, const char * fmt, ...) {
+void cprintf(const char * fmt, ...) {
 #ifdef _WIN32
     if (cprintf_init() == 0)
         return;
