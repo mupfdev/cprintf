@@ -110,7 +110,7 @@ static void cprintf_parse(const char * str, context_t * out) {
 #ifdef _WIN32
         out->attr = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
 #else
-        strcpy(out->ansi + out->ansi_len, "\x1b7m");
+        strcpy(out->ansi + out->ansi_len, "\x1b[7m");
         out->ansi_len += 4;
 #endif
     }
