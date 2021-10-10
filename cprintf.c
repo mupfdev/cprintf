@@ -158,7 +158,6 @@ void cprintf(const size_t fmt_am, const char * fmt, ...) {
 #endif
 
     context_t ctx;
-    memset(ctx, 0, sizeof(context_t));
 
     va_list vl;
     va_start(vl, fmt_am);
@@ -178,6 +177,8 @@ void cprintf(const size_t fmt_am, const char * fmt, ...) {
             continue;
         }
 
+        memset(&ctx, 0, sizeof(context_t));
+        
         if (c == '{') {
             while (1) {
                 cprintf_parse(fmt + i, &ctx);
@@ -194,7 +195,7 @@ void cprintf(const size_t fmt_am, const char * fmt, ...) {
             printf(va_arg(vl, char *));
             SetConsoleTextAttribute(con, def_attr);
 #else
-            printf("%s%s\x1b[0m\n", ctx.ansi, va_arg(vl, char *));
+            printf("%s%s\x1b[0m", ctx.ansi, va_arg(vl, char *));
 #endif
         } else {
             cprintf_parse(fmt + i, &ctx);
@@ -204,7 +205,7 @@ void cprintf(const size_t fmt_am, const char * fmt, ...) {
             printf(va_arg(vl, char *));
             SetConsoleTextAttribute(con, def_attr);
 #else
-            printf("%s%s\x1b[0m\n", ctx.ansi, va_arg(vl, char *));
+            printf("%s%s\x1b[0m", ctx.ansi, va_arg(vl, char *));
 #endif
 
             i += ctx.input_size;
