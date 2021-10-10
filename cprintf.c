@@ -13,14 +13,12 @@ static WORD def_attr = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
 
 #else
 #include <string.h>
-#include <ctype.h>
 #endif
 
+#include <ctype.h>
 #include <stdio.h>
 
 #ifdef _WIN32
-#define FIRST_CHAR str[0]
-
 static unsigned char cprintf_init(void) {
     if (con != NULL)
         return 1;
@@ -51,7 +49,6 @@ static const WORD colors[7][3] = {
         BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE }
 };
 #else
-#define FIRST_CHAR l
 static const char ansi_order[8] = {
     'k', 'r', 'g', 'y', 'b', 'm', 'c', 'w'
 };
@@ -69,21 +66,9 @@ typedef struct {
 
 static void cprintf_parse(const char * str, context_t * out) {
     out->input_size = 1;
-#ifndef _WIN32    
-    const char FIRST_CHAR = tolower(str[0]);
-#endif
+    const char l = tolower(str[0]);
 
-    if (FIRST_CHAR == 's') {
-#ifdef _WIN32
-        out->attr |= BACKGROUND_INTENSITY | FOREGROUND_INTENSITY;
-#else
-        strcpy(out->ansi + out->ansi_len, "\x1b[1m");
-        out->ansi_len += 4;
-#endif
-        return;
-    }
-
-    if (FIRST_CHAR == 'f' || FIRST_CHAR == 'b') {
+    if (l == 'f' || l == 'b') {
         out->input_size = 2;
         
         unsigned char i = 0;
@@ -94,19 +79,23 @@ static void cprintf_parse(const char * str, context_t * out) {
 #endif
         {
 #ifdef _WIN32
-            if (colors[i][0] == str[1]) {
-                out->attr |= colors[i][FIRST_CHAR == 'f' ? 1 : 2];
+            if (colors[i][0] == tolower(str[1])) {
+                out->attr |= colors[i][l == 'f' ? 1 : 2];
+                
+                if (l != str[0])
+                    out->attr |= l == 'b' ? BACKGROUND_INTENSITY : FOREGROUND_INTENSITY;
+                
                 break;
             }
 #else
-            if (ansi_order[i] == str[1]) {
+            if (ansi_order[i] == tolower(str[1])) {
                 strcpy(out->ansi + out->ansi_len, "\x1b[");
                 strcpy(out->ansi + out->ansi_len + 4, "m");
-                out->ansi[out->ansi_len + 2] = FIRST_CHAR == 'f' ? '3' : '4';
+                out->ansi[out->ansi_len + 2] = l == 'f' ? '3' : '4';
                 out->ansi[out->ansi_len + 3] = '0' + i;
                 out->ansi_len += 5;
                 
-                if (l != FIRST_CHAR) {
+                if (l != str[0]) {
                     strcpy(out->ansi + out->ansi_len - 1, ";1m");
                     out->ansi_len += 2;
                 }
@@ -117,7 +106,7 @@ static void cprintf_parse(const char * str, context_t * out) {
 
             i++;
         }
-    } else if (FIRST_CHAR == 'i') {
+    } else if (l == 'i') {
 #ifdef _WIN32
         out->attr = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
 #else
@@ -126,7 +115,7 @@ static void cprintf_parse(const char * str, context_t * out) {
 #endif
     }
     
-    if (FIRST_CHAR == 'u') {
+    if (l == 'u') {
 #ifdef _WIN32
         out->attr |= COMMON_LVB_UNDERSCORE;
 #else
