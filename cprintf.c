@@ -9,7 +9,7 @@
 
 static HANDLE con = NULL;
 static WORD def_attr = 0;
-static DWORD written;
+static DWORD written = 0;
 
 #else
 #include <string.h>
@@ -65,9 +65,7 @@ typedef struct {
 } context_t;
 
 static void cprintf_parse(const char * str, context_t * out) {
-#ifdef _WIN32
-    out->attr = 0;
-#endif
+    out->input_size = 1;
     const char l = tolower(str[0]);
 
 #ifdef _WIN32
@@ -77,10 +75,9 @@ static void cprintf_parse(const char * str, context_t * out) {
     if (l == 's') {
         strcpy(out->ansi + out->ansi_len, "\x1b[1m");
         out->ansi_len += 4;
+        return;
     }
 #endif
-
-    out->input_size = 1;
 
     if (l == 'f' || l == 'b') {
         out->input_size = 2;
