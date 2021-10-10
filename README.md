@@ -38,7 +38,6 @@ ar rcs -o libcprintf.a cprintf.o
 | `%bw`       | Changes the background color to white.   | -                                                                                  |
 | `%i`        | Inverts the background and text color.   | In windows, this is an alias for `%bw`.                                            |
 | `%u`        | Adds an underline.                       | In windows, if no color is provided (e.g: only `%u`), no visible text will appear. |
-| `%s`        | Brightens the text and background (bold) | -                                                                                  |
 
 # Bold
 You can make a text bold or background color brighter by capitalizing the format specifier. Example:
