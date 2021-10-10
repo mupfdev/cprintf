@@ -4,21 +4,23 @@
 #ifdef _MSC_VER
 #include <windows.h>
 #else
+#include <winbase.h>
 #include <wincon.h>
 #endif
 
 static HANDLE con = NULL;
-static WORD def_attr = 0;
-static DWORD written = 0;
+static WORD def_attr = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
 
 #else
 #include <string.h>
+#include <ctype.h>
 #endif
 
-#include <ctypes.h>
 #include <stdio.h>
 
 #ifdef _WIN32
+#define FIRST_CHAR str[0]
+
 static unsigned char cprintf_init(void) {
     if (con != NULL)
         return 1;
@@ -49,6 +51,7 @@ static const WORD colors[7][3] = {
         BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE }
 };
 #else
+#define FIRST_CHAR l
 static const char ansi_order[8] = {
     'k', 'r', 'g', 'y', 'b', 'm', 'c', 'w'
 };
@@ -66,43 +69,44 @@ typedef struct {
 
 static void cprintf_parse(const char * str, context_t * out) {
     out->input_size = 1;
-    const char l = tolower(str[0]);
-
-#ifdef _WIN32
-    if (l == 's' || l != str[0])
-        out->attr |= l == 'b' ? BACKGROUND_INTENSITY : FOREGROUND_INTENSITY;
-#else
-    if (l == 's') {
-        strcpy(out->ansi + out->ansi_len, "\x1b[1m");
-        out->ansi_len += 4;
-        return;
-    }
+#ifndef _WIN32    
+    const char FIRST_CHAR = tolower(str[0]);
 #endif
 
-    if (l == 'f' || l == 'b') {
+    if (FIRST_CHAR == 's') {
+#ifdef _WIN32
+        out->attr |= BACKGROUND_INTENSITY | FOREGROUND_INTENSITY;
+#else
+        strcpy(out->ansi + out->ansi_len, "\x1b[1m");
+        out->ansi_len += 4;
+#endif
+        return;
+    }
+
+    if (FIRST_CHAR == 'f' || FIRST_CHAR == 'b') {
         out->input_size = 2;
         
         unsigned char i = 0;
 #ifdef _WIN32
-        while (i < 8)
+        while (i < 7)
 #else
-        while (i < 9)
+        while (i < 8)
 #endif
         {
 #ifdef _WIN32
             if (colors[i][0] == str[1]) {
-                out->attr |= colors[i][l == 'f' ? 1 : 2];
+                out->attr |= colors[i][FIRST_CHAR == 'f' ? 1 : 2];
                 break;
             }
 #else
-            if (ansi_order[i] == tolower(str[1])) {
+            if (ansi_order[i] == str[1]) {
                 strcpy(out->ansi + out->ansi_len, "\x1b[");
                 strcpy(out->ansi + out->ansi_len + 4, "m");
-                out->ansi[out->ansi_len + 2] = l == 'f' ? '3' : '4';
+                out->ansi[out->ansi_len + 2] = FIRST_CHAR == 'f' ? '3' : '4';
                 out->ansi[out->ansi_len + 3] = '0' + i;
                 out->ansi_len += 5;
                 
-                if (str[0] != l) {
+                if (l != FIRST_CHAR) {
                     strcpy(out->ansi + out->ansi_len - 1, ";1m");
                     out->ansi_len += 2;
                 }
@@ -110,17 +114,19 @@ static void cprintf_parse(const char * str, context_t * out) {
                 break;
             }
 #endif
+
+            i++;
         }
-    } else if (l == 'i') {
+    } else if (FIRST_CHAR == 'i') {
 #ifdef _WIN32
-        out->attr |= COMMON_LVB_REVERSE_VIDEO;
+        out->attr = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
 #else
         strcpy(out->ansi + out->ansi_len, "\x1b7m");
         out->ansi_len += 4;
 #endif
     }
     
-    if (l == 'u') {
+    if (FIRST_CHAR == 'u') {
 #ifdef _WIN32
         out->attr |= COMMON_LVB_UNDERSCORE;
 #else
@@ -128,26 +134,7 @@ static void cprintf_parse(const char * str, context_t * out) {
         out->ansi_len += 4;
 #endif
     }
-    
-    if (str)
 } 
-
-/*
-%d = ignored
-
-%bb = background blue 
-%bg = background green
-%br = background red
-%bk = background black
-%bm = backgorund magenta
-%bc = background cyan
-%bw = background white
-%by = backtround yello
-
-%u = underline
-%i = invert
-
-*/
 
 void cprintf(const size_t fmt_am, const char * fmt, ...) {
 #ifdef _WIN32
@@ -158,7 +145,7 @@ void cprintf(const size_t fmt_am, const char * fmt, ...) {
     context_t ctx;
 
     va_list vl;
-    va_start(vl, fmt_am);
+    va_start(vl, fmt);
 
     unsigned char is_fmt = 0;
     size_t i = 0;
@@ -178,15 +165,19 @@ void cprintf(const size_t fmt_am, const char * fmt, ...) {
         memset(&ctx, 0, sizeof(context_t));
         
         if (c == '{') {
+            i++;
+            
             while (1) {
                 cprintf_parse(fmt + i, &ctx);
                 
                 i += ctx.input_size;
-                if (fmt[i] == ',')
-                    i++;
-                else
+                if (fmt[i] != ',')
                     break;
+                
+                i++;
             }
+            
+            i++;
             
 #ifdef _WIN32
             SetConsoleTextAttribute(con, ctx.attr);
@@ -197,7 +188,6 @@ void cprintf(const size_t fmt_am, const char * fmt, ...) {
 #endif
         } else {
             cprintf_parse(fmt + i, &ctx);
-            
 #ifdef _WIN32
             SetConsoleTextAttribute(con, ctx.attr);
             printf(va_arg(vl, char *));
