@@ -15,6 +15,7 @@ static WORD def_attr = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
 #include <string.h>
 #endif
 
+#include <stdlib.h>
 #include <ctype.h>
 #include <stdio.h>
 
