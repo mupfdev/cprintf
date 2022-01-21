@@ -196,8 +196,9 @@ size_t cprintf_ansi(char * str, const size_t size, const char * fmt, ...) {
                 cprintf_ansi_parse(fmt + i, &ctx);
                 
                 i += ctx.input_size;
-                if (fmt[i] != ',')
-                    break;
+                if (fmt[i] != ',') {
+                    return 0;
+                }
                 
                 i++;
             }
@@ -279,8 +280,9 @@ void cprintf(const char * fmt, ...) {
                 cprintf_parse(fmt + i, &ctx);
                 
                 i += ctx.input_size;
-                if (fmt[i] != ',')
-                    break;
+                if (fmt[i] != ',') {
+                    return;
+                }
                 
                 i++;
             }
