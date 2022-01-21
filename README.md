@@ -7,8 +7,8 @@ Don't want for the library to mess up with your `%`? Use this:
 ```c
 cprintf("Hello, \\%fg", "world!");
 ```
-Want for the library to act like `chalk`? Use this!
-```
+Want for the library to act like [`chalk`](https://www.npmjs.com/package/chalk)? Use this!
+```c
 char result[100];
 
 cprintf_ansi(result, 100, "Hello, %fg", "world!");
