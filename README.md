@@ -11,7 +11,11 @@ Want for the library to act like [`chalk`](https://www.npmjs.com/package/chalk)?
 ```c
 char result[100];
 
-cprintf_ansi(result, 100, "Hello, %fg", "world!");
+if (cprintf_ansi(result, 100, "Hello, %fg", "world!") == 0) {
+    /* error handling here. 
+       not necessary if you don't use
+       combined format specifiers. */
+}
 ```
 
 # Build
