@@ -1,20 +1,27 @@
 # cprintf
 Portable C Library for printing colored text on the terminal with the C formatting style. Usage:
 ```c
-#include <cprintf.h>
+cprintf("Hello, %fg world!\n", "green text!!!");
+```
+Don't want for the library to mess up with your `%`? Use this:
+```c
+cprintf("Hello, \\%fg", "world!");
+```
+Want for the library to act like `chalk`? Use this!
+```
+char result[100];
 
-int main() {
-    cprintf("Hello, %fg world!\n", "green text!!!");
-    
-    return 0;
-}
+cprintf_ansi(result, 100, "Hello, %fg", "world!");
 ```
 
 # Build
-Building is easy and straight-forward.
-```sh
-gcc -c -Wall -O3 cprintf.c -o cprintf.o
-ar rcs -o libcprintf.a cprintf.o
+- MinGW/GCC
+```
+make
+```
+- MSVC
+```
+nmake /nologo /f .\Makefile.vc
 ```
 
 # Table of formats

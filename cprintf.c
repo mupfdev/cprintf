@@ -15,7 +15,6 @@ static WORD def_attr = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
 #include <string.h>
 #endif
 
-#include <stdlib.h>
 #include <ctype.h>
 #include <stdio.h>
 
@@ -49,23 +48,28 @@ static const WORD colors[7][3] = {
         FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
         BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE }
 };
-#else
+#endif
+
 static const char ansi_order[8] = {
     'k', 'r', 'g', 'y', 'b', 'm', 'c', 'w'
 };
-#endif
 
 typedef struct {
-#ifdef _WIN32
-    WORD attr;
-#else
     char ansi[20];
     unsigned char ansi_len;
-#endif
+    unsigned char input_size;
+} ansi_context_t;
+
+#ifdef _WIN32
+typedef struct {
+    WORD attr;
     unsigned char input_size;
 } context_t;
+#else
+typedef ansi_context_t context_t;
+#endif
 
-static void cprintf_parse(const char * str, context_t * out) {
+static void cprintf_ansi_parse(const char * str, ansi_context_t * out) {
     out->input_size = 1;
     const char l = tolower(str[0]);
 
@@ -73,22 +77,8 @@ static void cprintf_parse(const char * str, context_t * out) {
         out->input_size = 2;
         
         unsigned char i = 0;
-#ifdef _WIN32
-        while (i < 7)
-#else
-        while (i < 8)
-#endif
-        {
-#ifdef _WIN32
-            if (colors[i][0] == tolower(str[1])) {
-                out->attr |= colors[i][l == 'f' ? 1 : 2];
-                
-                if (l != str[0])
-                    out->attr |= l == 'b' ? BACKGROUND_INTENSITY : FOREGROUND_INTENSITY;
-                
-                break;
-            }
-#else
+
+        while (i < 8) {
             if (ansi_order[i] == tolower(str[1])) {
                 strcpy(out->ansi + out->ansi_len, "\x1b[");
                 strcpy(out->ansi + out->ansi_len + 4, "m");
@@ -103,28 +93,143 @@ static void cprintf_parse(const char * str, context_t * out) {
                 
                 break;
             }
-#endif
 
             i++;
         }
     } else if (l == 'i') {
-#ifdef _WIN32
-        out->attr = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
-#else
         strcpy(out->ansi + out->ansi_len, "\x1b[7m");
         out->ansi_len += 4;
-#endif
     }
     
     if (l == 'u') {
-#ifdef _WIN32
-        out->attr |= COMMON_LVB_UNDERSCORE;
-#else
         strcpy(out->ansi + out->ansi_len, "\x1b[4m");
         out->ansi_len += 4;
-#endif
+    }
+}
+
+#ifndef _WIN32
+#define cprintf_parse cprintf_ansi_parse
+#else
+static void cprintf_parse(const char * str, context_t * out) {
+    out->input_size = 1;
+    const char l = tolower(str[0]);
+
+    if (l == 'f' || l == 'b') {
+        out->input_size = 2;
+        
+        unsigned char i = 0;
+
+        while (i < 7) {
+            if (colors[i][0] == tolower(str[1])) {
+                out->attr |= colors[i][l == 'f' ? 1 : 2];
+                
+                if (l != str[0])
+                    out->attr |= l == 'b' ? BACKGROUND_INTENSITY : FOREGROUND_INTENSITY;
+                
+                break;
+            }
+            
+            i++;
+        }
+    } else if (l == 'i') {
+        out->attr = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
+    }
+    
+    if (l == 'u') {
+        out->attr |= COMMON_LVB_UNDERSCORE;
     }
 } 
+#endif
+
+#define STATUS_NULL    0
+#define STATUS_ESCAPE  1
+#define STATUS_FMT     2
+
+size_t cprintf_ansi(char * str, const size_t size, const char * fmt, ...) {
+    ansi_context_t ctx;
+
+    va_list vl;
+    va_start(vl, fmt);
+
+    unsigned char status = STATUS_NULL;
+    size_t copied = 0;
+    size_t i = 0;
+    char * c_ptr;
+    char c;
+    
+    while ((c = fmt[i]) != 0 && copied < size) {
+        i++;
+        
+        if (c == '\\') {
+            if (status == STATUS_NULL) {
+                status = STATUS_ESCAPE;
+            } else {
+                putchar('\\');
+                status = STATUS_NULL;
+            }
+            
+            continue;
+        } else if (c == '%') {
+            if (status == STATUS_ESCAPE) {
+                str[copied] = '%';
+                copied++;
+                status = STATUS_NULL;
+            } else {
+                status = STATUS_FMT;
+            }
+            
+            continue;
+        } else if (status == STATUS_NULL) {
+            if (copied == size) {
+                return copied;
+            }
+            
+            str[copied] = c;
+            copied++;
+            continue;
+        }
+
+        memset(&ctx, 0, sizeof(ansi_context_t));
+        
+        if (c == '{') {
+            while (1) {
+                cprintf_ansi_parse(fmt + i, &ctx);
+                
+                i += ctx.input_size;
+                if (fmt[i] != ',')
+                    break;
+                
+                i++;
+            }
+            
+            i++;
+        } else {
+            i--;
+            cprintf_ansi_parse(fmt + i, &ctx);
+            i += ctx.input_size;
+        }
+        
+        for (c_ptr = &ctx.ansi[0]; copied < size && *c_ptr; c_ptr++) {
+            str[copied] = *c_ptr;
+            copied++;
+        }
+        
+        for (c_ptr = va_arg(vl, char *); copied < size && *c_ptr; c_ptr++) {
+            str[copied] = *c_ptr;
+            copied++;
+        }
+        
+        for (c_ptr = "\x1b[0m"; copied < size && *c_ptr; c_ptr++) {
+            str[copied] = *c_ptr;
+            copied++;
+        }
+
+        status = STATUS_NULL;
+    }
+    
+    str[copied] = 0;
+    return copied;
+}
 
 void cprintf(const char * fmt, ...) {
 #ifdef _WIN32
@@ -137,26 +242,39 @@ void cprintf(const char * fmt, ...) {
     va_list vl;
     va_start(vl, fmt);
 
-    unsigned char is_fmt = 0;
+    unsigned char status = STATUS_NULL;
     size_t i = 0;
     char c;
     
     while ((c = fmt[i]) != 0) {
-        if (c == '%') {
-            is_fmt = 1;
-            i++;
+        i++;
+        
+        if (c == '\\') {
+            if (status == STATUS_NULL) {
+                status = STATUS_ESCAPE;
+            } else {
+                putchar('\\');
+                status = STATUS_NULL;
+            }
+            
             continue;
-        } else if (is_fmt == 0) {
+        } else if (c == '%') {
+            if (status == STATUS_ESCAPE) {
+                putchar('%');
+                status = STATUS_NULL;
+            } else {
+                status = STATUS_FMT;
+            }
+            
+            continue;
+        } else if (status == STATUS_NULL) {
             putchar(c);
-            i++;
             continue;
         }
 
         memset(&ctx, 0, sizeof(context_t));
         
         if (c == '{') {
-            i++;
-            
             while (1) {
                 cprintf_parse(fmt + i, &ctx);
                 
@@ -177,6 +295,7 @@ void cprintf(const char * fmt, ...) {
             printf("%s%s\x1b[0m", ctx.ansi, va_arg(vl, char *));
 #endif
         } else {
+            i--;
             cprintf_parse(fmt + i, &ctx);
 #ifdef _WIN32
             SetConsoleTextAttribute(con, ctx.attr);
@@ -189,7 +308,7 @@ void cprintf(const char * fmt, ...) {
             i += ctx.input_size;
         }
 
-        is_fmt = 0;
+        status = STATUS_NULL;
     }
     
     va_end(vl);
