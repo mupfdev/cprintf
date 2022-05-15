@@ -1,6 +1,0 @@
-cprintf.lib: cprintf.obj
-	lib.exe /nologo /OUT:cprintf.lib cprintf.obj
-	del cprintf.obj
-
-cprintf.obj: cprintf.c cprintf.h
-	cl.exe /nologo /O2 /c cprintf.c /Fo"cprintf.obj"

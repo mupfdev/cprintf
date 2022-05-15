@@ -19,13 +19,26 @@ if (cprintf_ansi(result, 100, "Hello, %fg", "world!") == 0) {
 ```
 
 # Build
-- MinGW/GCC
-```
+- POSIX (GCC)
+```console
 make
 ```
-- MSVC
+- POSIX (Clang)
+```console
+make CC=clang
 ```
-nmake /nologo /f .\Makefile.vc
+- Windows (MinGW/GCC)
+```console
+make WIN=yes
+```
+- Windows (MSVC)
+```console
+nmake /nologo /f VisualStudioMakefile
+```
+- Windows (Clang)
+This one must be the clang bundled with Visual Studio.
+```console
+nmake /nologo /f VisualStudioMakefile CC=clang
 ```
 
 # Table of formats
