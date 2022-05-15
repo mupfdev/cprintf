@@ -36,7 +36,8 @@ make WIN=yes
 nmake /nologo /f VisualStudioMakefile
 ```
 - Windows (Clang)
-This one must be the clang bundled with Visual Studio.
+
+> This one must be the clang bundled with Visual Studio.
 ```console
 nmake /nologo /f VisualStudioMakefile CC=clang
 ```
